@@ -1,4 +1,4 @@
-# urlQuery
+# urlQueryStringDecode
 
 ## DESCRIPTION
 
@@ -44,24 +44,24 @@ would translate to:
 
 ## BUILD
 
-Building urlDecode requires: make gcc 
+Building urlQueryStringDecode requires: make gcc 
 
-To build 'urlDecode':
+To build 'urlQueryStringDecode':
 
  \# make
 
 
 ## USAGE
 
-urlDecode supports two ways to receive the URL query string:
+urlQueryStringDecode supports two ways to receive the URL query string:
 
 Using option 'i' reads a URL query string from standard input and writes the list of variable assignments to standard output:
 
- \# printURLquery | ./urlDecode -i | handleAssignmentList
+ \# printURLquery | ./urlQueryStringDecode -i | handleAssignmentList
 
 Using option 's' reads URL query string from command line and writes the list of variable assignments to standard output:
 
- \# ./urlDecode -s "<URL query string\>" | handleAssignmentList
+ \# ./urlQueryStringDecode -s "<URL query string\>" | handleAssignmentList
 
 
 In a http server Bash script:
@@ -70,7 +70,7 @@ In a http server Bash script:
  \#\
  \# Translate the URL query string from standard input to a variable assignment list and add it to the shell script's environment:
 
- source /dev/stdin <<< `urlDecode -i`
+ source /dev/stdin <<< `urlQueryStringDecode -i`
 
  \# Rest of script...
  
@@ -81,7 +81,7 @@ Or:
  #\
  \# Translate the URL query string from ${QUERY_STRING} to a variable assignment list and add it to the shell script's environment:
 
- source /dev/stdin <<< `urlDecode -s "${QUERY_STRING}"`
+ source /dev/stdin <<< `urlQueryStringDecode -s "${QUERY_STRING}"`
 
  \# Rest of script...
 

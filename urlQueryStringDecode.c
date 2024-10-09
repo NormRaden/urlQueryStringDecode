@@ -135,7 +135,7 @@ void decodedPrint(char rawChar, decodeState *state, void (*handleChar)(char))
  }
 }
 
-void parseURLQuery(int c, parseState *p, decodeState *d)
+void parseURLQueryString(int c, parseState *p, decodeState *d)
 {
   if(p->tokenDecode == IDENTIFIER)
   {
@@ -219,16 +219,16 @@ int main(int argc, char** argv)
     {
       case 'i':
         while((c = getchar()) != EOF)
-          parseURLQuery(c, &parse, &decode);
-        parseURLQuery(-1, &parse, &decode);
+          parseURLQueryString(c, &parse, &decode);
+        parseURLQueryString(-1, &parse, &decode);
         doanything = -1;
         break;
       case 's':
         e = optarg;
 
         for(parse.i=0;*e != '\0'; e++)
-          parseURLQuery(*e, &parse, &decode);
-        parseURLQuery(-1, &parse, &decode);
+          parseURLQueryString(*e, &parse, &decode);
+        parseURLQueryString(-1, &parse, &decode);
         doanything = -1;
         break;
     }

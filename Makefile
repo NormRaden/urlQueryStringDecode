@@ -1,11 +1,11 @@
 #
-# Simple Makefile to build urlDecode 
+# Simple Makefile to build urlQueryStringDecode 
 
-urlDecode: urlDecode.c Makefile
-	gcc -s -O3 -o urlDecode urlDecode.c
+urlQueryStringDecode: urlQueryStringDecode.c Makefile
+	gcc -s -O3 -o urlQueryStringDecode urlQueryStringDecode.c
 
-all: urlDecode
+all: urlQueryStringDecode
 
 clean:
-	rm urlDecode 2>/dev/null
+	rm urlQueryStringDecode 2>/dev/null
 
