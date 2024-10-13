@@ -1,11 +1,21 @@
 #
-# Simple Makefile to build urlQueryStringDecode 
+# Makefile to build urlQueryStringDecode 
 
-urlQueryStringDecode: urlQueryStringDecode.c Makefile
-	gcc -s -O3 -o urlQueryStringDecode urlQueryStringDecode.c
+CC=gcc
+CFLAGS=-s -O3
+TARGET=urlQueryStringDecode
+SOURCES=urlQueryStringDecode.c
 
-all: urlQueryStringDecode
+.PHONY: all clean verify
+
+all: $(TARGET)
+
+$(TARGET): $(SOURCES)
+	$(CC) $(CFLAGS) -o $(TARGET) $(SOURCES)
 
 clean:
-	rm urlQueryStringDecode 2>/dev/null
+	rm -f $(TARGET)
+
+verify: all
+	sh testUrlQueryStringDecode.sh
 
