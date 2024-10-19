@@ -82,8 +82,11 @@ int decodeHexDigit(char digit)
 
 void decodedPrint(char rawChar, decodeState *state, void (*handleChar)(char))
 {
- if(state->charDecode == PLAIN)
+ int digit;
+
+ switch(state->charDecode)
  {
+  case PLAIN:
    if(rawChar == '%')
    {
      state->charDecode = FIRSTHEX;
@@ -97,11 +100,9 @@ void decodedPrint(char rawChar, decodeState *state, void (*handleChar)(char))
    {
      handleChar(rawChar);
    }
- }
- else if(state->charDecode == FIRSTHEX)
- {
-   int digit;
+   break;
 
+  case FIRSTHEX:
    digit = decodeHexDigit(rawChar);
    if(digit >= 0)
    {
@@ -114,11 +115,9 @@ void decodedPrint(char rawChar, decodeState *state, void (*handleChar)(char))
      handleChar('%');
      handleChar(rawChar);
    }
- }
- else if(state->charDecode == FINALHEX)
- {
-   int digit;
+   break;
 
+  case FINALHEX:
    digit = decodeHexDigit(rawChar);
    if(digit >= 0)
    {
@@ -132,13 +131,15 @@ void decodedPrint(char rawChar, decodeState *state, void (*handleChar)(char))
      handleChar(state->encodedChar>>4);
      handleChar(rawChar);
    }
+   break;
  }
 }
 
 void parseURLQueryString(int c, parseState *p, decodeState *d)
 {
-  if(p->tokenDecode == IDENTIFIER)
+  switch(p->tokenDecode)
   {
+   case IDENTIFIER:
     if(c == '=')
     {
       if(p->i > 0)
@@ -164,9 +165,9 @@ void parseURLQueryString(int c, parseState *p, decodeState *d)
     {
       decodedPrint(c, d, replaceNonAlphaNumericsWithUnderscores);
     }
-  }
-  else if(p->tokenDecode == VALUE)
-  {
+    break;
+
+  case VALUE: 
     if((c == '&') || (c == -1) || (c == '\n'))
     {
       if(p->i > 0)
@@ -181,14 +182,15 @@ void parseURLQueryString(int c, parseState *p, decodeState *d)
     {
       decodedPrint(c, d, escapeSpecialCharacters);
     }
-  }
-  else if(p->tokenDecode == NOIDENTIFIERVALUE)
-  {
+    break;
+
+  case NOIDENTIFIERVALUE:
     if((c == '&') || (c == '\n'))
     {
       p->tokenDecode = IDENTIFIER;
       p->i = -1;
     }
+    break;
   }
   p->i++;
 }
