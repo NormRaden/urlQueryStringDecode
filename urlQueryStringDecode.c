@@ -82,115 +82,115 @@ int decodeHexDigit(char digit)
 
 void decodedPrint(char rawChar, decodeState *state, void (*handleChar)(char))
 {
- int digit;
+  int digit;
 
- switch(state->charDecode)
- {
-  case PLAIN:
-   if(rawChar == '%')
-   {
-     state->charDecode = FIRSTHEX;
-     state->encodedChar = (char)0;
-   }
-   else if(rawChar == '+')
-   {
-     handleChar(' ');
-   }
-   else
-   {
-     handleChar(rawChar);
-   }
-   break;
+  switch(state->charDecode)
+  {
+    case PLAIN:
+      if(rawChar == '%')
+      {
+        state->charDecode = FIRSTHEX;
+        state->encodedChar = (char)0;
+      }
+      else if(rawChar == '+')
+      {
+        handleChar(' ');
+      }
+      else
+      {
+        handleChar(rawChar);
+      }
+      break;
 
-  case FIRSTHEX:
-   digit = decodeHexDigit(rawChar);
-   if(digit >= 0)
-   {
-     state->encodedChar = digit<<4;
-     state->charDecode = FINALHEX;
-   }
-   else
-   {
-     state->charDecode = PLAIN;  /* Error in decode */
-     handleChar('%');
-     handleChar(rawChar);
-   }
-   break;
+    case FIRSTHEX:
+      digit = decodeHexDigit(rawChar);
+      if(digit >= 0)
+      {
+        state->encodedChar = digit<<4;
+        state->charDecode = FINALHEX;
+      }
+      else
+      {
+        state->charDecode = PLAIN;  /* Error in decode */
+        handleChar('%');
+        handleChar(rawChar);
+      }
+      break;
 
-  case FINALHEX:
-   digit = decodeHexDigit(rawChar);
-   if(digit >= 0)
-   {
-     state->encodedChar |= digit;
-     state->charDecode = PLAIN;
-     handleChar(state->encodedChar);
-   }
-   else
-   {
-     state->charDecode = PLAIN;  /* Error in decode */
-     handleChar(state->encodedChar>>4);
-     handleChar(rawChar);
-   }
-   break;
- }
+    case FINALHEX:
+      digit = decodeHexDigit(rawChar);
+      if(digit >= 0)
+      {
+        state->encodedChar |= digit;
+        state->charDecode = PLAIN;
+        handleChar(state->encodedChar);
+      }
+      else
+      {
+        state->charDecode = PLAIN;  /* Error in decode */
+        handleChar(state->encodedChar>>4);
+        handleChar(rawChar);
+      }
+      break;
+  }
 }
 
 void parseURLQueryString(int c, parseState *p, decodeState *d)
 {
   switch(p->tokenDecode)
   {
-   case IDENTIFIER:
-    if(c == '=')
-    {
-      if(p->i > 0)
+    case IDENTIFIER:
+      if(c == '=')
       {
-        putchar('=');
-        putchar('"');
-        p->tokenDecode = VALUE;
+        if(p->i > 0)
+        {
+           putchar('=');
+           putchar('"');
+           p->tokenDecode = VALUE;
+        }
+        else
+        {
+          p->tokenDecode = NOIDENTIFIERVALUE;
+        }
+        p->i = -1;
+      }
+      else if((c == '&') || (c == -1) || (c == '\n'))
+      {
+        if(p->i > 0)
+          putchar('\n');
+        p->tokenDecode = IDENTIFIER;
+        p->i = -1;
       }
       else
       {
-        p->tokenDecode = NOIDENTIFIERVALUE;
+        decodedPrint(c, d, replaceNonAlphaNumericsWithUnderscores);
       }
-      p->i = -1;
-    }
-    else if((c == '&') || (c == -1) || (c == '\n'))
-    {
-      if(p->i > 0)
-        putchar('\n');
-      p->tokenDecode = IDENTIFIER;
-      p->i = -1;
-    }
-    else
-    {
-      decodedPrint(c, d, replaceNonAlphaNumericsWithUnderscores);
-    }
-    break;
+      break;
 
-  case VALUE: 
-    if((c == '&') || (c == -1) || (c == '\n'))
-    {
-      if(p->i > 0)
+    case VALUE: 
+      if((c == '&') || (c == -1) || (c == '\n'))
       {
-        putchar('"');
-        putchar('\n');
+        if(p->i > 0)
+        {
+          putchar('"');
+          putchar('\n');
+        }
+        p->tokenDecode = IDENTIFIER;
+        p->i = -1;
       }
-      p->tokenDecode = IDENTIFIER;
-      p->i = -1;
-    }
-    else
-    {
-      decodedPrint(c, d, escapeSpecialCharacters);
-    }
-    break;
+      else
+      {
+        decodedPrint(c, d, escapeSpecialCharacters);
+      }
+      break;
 
-  case NOIDENTIFIERVALUE:
-    if((c == '&') || (c == '\n'))
-    {
-      p->tokenDecode = IDENTIFIER;
-      p->i = -1;
-    }
-    break;
+    case NOIDENTIFIERVALUE:
+      if((c == '&') || (c == '\n'))
+      {
+        p->tokenDecode = IDENTIFIER;
+        p->i = -1;
+      }
+      break;
   }
   p->i++;
 }
