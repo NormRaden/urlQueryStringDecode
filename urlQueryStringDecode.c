@@ -14,14 +14,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS” 
 
 
 #include <stdio.h>
-#include <stdlib.h>
 #include <unistd.h>
-
-typedef struct
-{
-  char* token;
-  int length;
-} wordSegment;
 
 typedef struct
 {
@@ -62,8 +55,6 @@ void replaceNonAlphaNumericsWithUnderscores(char c)
 {
   if((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9'))
     putchar(c);
-  else if((c >= 0) && (c <= 31))
-    ;
   else
     putchar('_');
 }
