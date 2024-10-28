@@ -1,6 +1,6 @@
 /**
 
-Copyright 2023 Norman Raden
+Copyright 2023- Norman Raden
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
 
@@ -15,35 +15,98 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS” 
 
 #include <stdio.h>
 #include <unistd.h>
+#include <stdbool.h>
 
 typedef struct
 {
-  enum tokenDecodeState
+  enum
   {
-    IDENTIFIER,
-    VALUE,
-    NOIDENTIFIERVALUE
-  } tokenDecode;
-  int i;
-} parseState;
-
-typedef struct
-{
-  enum charDecodeState
-  {
-    PLAIN,
-    FIRSTHEX,
-    FINALHEX
+    SINGLE_CHAR,
+    FIRST_HEXADECIMAL,
+    SECOND_HEXADECIMAL
   } charDecode;
   char encodedChar;
-} decodeState;
+} characterDecodeState;
 
-void passThrough(char c)
+int decodeHexDigit(char digit)
+{
+  if(digit >= '0' && digit <= '9')
+    return (digit - '0');
+  else if(digit >= 'a' && digit <= 'f')
+    return (digit - 'a' + 10);
+  else if(digit >= 'A' && digit <= 'F')
+    return (digit - 'A' + 10);
+  else
+    return -1;
+}
+
+void characterDecodeStateInitialize(characterDecodeState *state)
+{
+  state->charDecode = SINGLE_CHAR;
+  state->encodedChar = (char)0;
+}
+
+void decodeURLQueryStringAndPrint(char rawChar, characterDecodeState *state, void (*rewriteCharacters)(char))
+{
+  int digit;
+
+  switch(state->charDecode)
+  {
+    case SINGLE_CHAR:
+      if(rawChar == '%')
+      {
+        state->charDecode = FIRST_HEXADECIMAL;
+        state->encodedChar = (char)0;
+      }
+      else if(rawChar == '+')
+      {
+        rewriteCharacters(' ');
+      }
+      else
+      {
+        rewriteCharacters(rawChar);
+      }
+      break;
+
+    case FIRST_HEXADECIMAL:
+      digit = decodeHexDigit(rawChar);
+      if(digit >= 0)
+      {
+        state->encodedChar = digit<<4;
+        state->charDecode = SECOND_HEXADECIMAL;
+      }
+      else
+      {
+        state->charDecode = SINGLE_CHAR;  /* Error in decode */
+        rewriteCharacters('%');
+        rewriteCharacters(rawChar);
+      }
+      break;
+
+    case SECOND_HEXADECIMAL:
+      digit = decodeHexDigit(rawChar);
+      if(digit >= 0)
+      {
+        state->encodedChar |= digit;
+        state->charDecode = SINGLE_CHAR;
+        rewriteCharacters(state->encodedChar);
+      }
+      else
+      {
+        state->charDecode = SINGLE_CHAR;  /* Error in decode */
+        rewriteCharacters(state->encodedChar>>4);
+        rewriteCharacters(rawChar);
+      }
+      break;
+  }
+}
+
+void passThroughCharacters(char c)
 {
   putchar(c);
 }
 
-void escapeSpecialCharacters(char c)
+void escapeDoubleQuoteCharacters(char c)
 {
   if(c == '"')
     putchar('\\');
@@ -59,131 +122,75 @@ void replaceNonAlphaNumericsWithUnderscores(char c)
     putchar('_');
 }
 
-int decodeHexDigit(char digit)
+typedef struct
 {
-  if(digit >= '0' && digit <= '9')
-    return (digit - '0');
-  else if(digit >= 'a' && digit <= 'f')
-    return (digit - 'a' + 10);
-  else if(digit >= 'A' && digit <= 'F')
-    return (digit - 'A' + 10);
-  else
-    return -1;
+  enum
+  {
+    IDENTIFIER_TOKEN_PENDING,
+    IDENTIFIER_TOKEN,
+    VALUE_TOKEN,
+    UNKNOWN_TOKEN
+  } tokenDecode;
+} parseURLQueryStringState;
+
+void parseURLQueryStringInitialize(parseURLQueryStringState *state)
+{
+  state->tokenDecode = IDENTIFIER_TOKEN_PENDING;
 }
 
-void decodedPrint(char rawChar, decodeState *state, void (*handleChar)(char))
+void parseURLQueryString(int c, parseURLQueryStringState *parseState, characterDecodeState *characterState)
 {
-  int digit;
-
-  switch(state->charDecode)
+  switch(parseState->tokenDecode)
   {
-    case PLAIN:
-      if(rawChar == '%')
-      {
-        state->charDecode = FIRSTHEX;
-        state->encodedChar = (char)0;
-      }
-      else if(rawChar == '+')
-      {
-        handleChar(' ');
-      }
-      else
-      {
-        handleChar(rawChar);
-      }
-      break;
-
-    case FIRSTHEX:
-      digit = decodeHexDigit(rawChar);
-      if(digit >= 0)
-      {
-        state->encodedChar = digit<<4;
-        state->charDecode = FINALHEX;
-      }
-      else
-      {
-        state->charDecode = PLAIN;  /* Error in decode */
-        handleChar('%');
-        handleChar(rawChar);
-      }
-      break;
-
-    case FINALHEX:
-      digit = decodeHexDigit(rawChar);
-      if(digit >= 0)
-      {
-        state->encodedChar |= digit;
-        state->charDecode = PLAIN;
-        handleChar(state->encodedChar);
-      }
-      else
-      {
-        state->charDecode = PLAIN;  /* Error in decode */
-        handleChar(state->encodedChar>>4);
-        handleChar(rawChar);
-      }
-      break;
-  }
-}
-
-void parseURLQueryString(int c, parseState *p, decodeState *d)
-{
-  switch(p->tokenDecode)
-  {
-    case IDENTIFIER:
+    case IDENTIFIER_TOKEN_PENDING:
       if(c == '=')
       {
-        if(p->i > 0)
-        {
-           putchar('=');
-           putchar('"');
-           p->tokenDecode = VALUE;
-        }
-        else
-        {
-          p->tokenDecode = NOIDENTIFIERVALUE;
-        }
-        p->i = -1;
+        parseState->tokenDecode = UNKNOWN_TOKEN;
+      }
+      else if (!((c == '&') || (c == -1) || (c == '\n')))
+      {
+        parseState->tokenDecode = IDENTIFIER_TOKEN;
+        decodeURLQueryStringAndPrint(c, characterState, replaceNonAlphaNumericsWithUnderscores);
+      }
+      break;
+    case IDENTIFIER_TOKEN:
+      if(c == '=')
+      {
+         putchar('=');
+         putchar('"');
+         parseState->tokenDecode = VALUE_TOKEN;
       }
       else if((c == '&') || (c == -1) || (c == '\n'))
       {
-        if(p->i > 0)
-          putchar('\n');
-        p->tokenDecode = IDENTIFIER;
-        p->i = -1;
+        putchar('\n');
+        parseState->tokenDecode = IDENTIFIER_TOKEN_PENDING;
       }
       else
       {
-        decodedPrint(c, d, replaceNonAlphaNumericsWithUnderscores);
+        decodeURLQueryStringAndPrint(c, characterState, replaceNonAlphaNumericsWithUnderscores);
       }
       break;
 
-    case VALUE: 
+    case VALUE_TOKEN: 
       if((c == '&') || (c == -1) || (c == '\n'))
       {
-        if(p->i > 0)
-        {
-          putchar('"');
-          putchar('\n');
-        }
-        p->tokenDecode = IDENTIFIER;
-        p->i = -1;
+        putchar('"');
+        putchar('\n');
+        parseState->tokenDecode = IDENTIFIER_TOKEN_PENDING;
       }
       else
       {
-        decodedPrint(c, d, escapeSpecialCharacters);
+        decodeURLQueryStringAndPrint(c, characterState, escapeDoubleQuoteCharacters);
       }
       break;
 
-    case NOIDENTIFIERVALUE:
+    case UNKNOWN_TOKEN:
       if((c == '&') || (c == '\n'))
       {
-        p->tokenDecode = IDENTIFIER;
-        p->i = -1;
+        parseState->tokenDecode = IDENTIFIER_TOKEN_PENDING;
       }
       break;
   }
-  p->i++;
 }
 
 /* NOTE: For interfacing in bash:
@@ -193,40 +200,37 @@ void parseURLQueryString(int c, parseState *p, decodeState *d)
 int main(int argc, char** argv)
 {
   int c;
-  char *e;
+  char *urlString;
 
-  int doanything = 0;
+  bool performedAction = false;
 
-  parseState parse;
-  parse.tokenDecode = IDENTIFIER;
-  parse.i = 0;
+  parseURLQueryStringState parse;
+  parseURLQueryStringInitialize(&parse);
 
-  decodeState decode;
-  decode.charDecode = PLAIN;
+  characterDecodeState decode;
+  characterDecodeStateInitialize(&decode);
 
-  int opt;
+  int option;
 
-  while ((opt = getopt(argc, argv, "is:")) != -1)
+  while ((option = getopt(argc, argv, "is:")) != -1)
   {
-    switch(opt)
+    switch(option)
     {
       case 'i':
         while((c = getchar()) != EOF)
           parseURLQueryString(c, &parse, &decode);
         parseURLQueryString(-1, &parse, &decode);
-        doanything = -1;
+        performedAction = true;
         break;
       case 's':
-        e = optarg;
-
-        for(parse.i=0;*e != '\0'; e++)
-          parseURLQueryString(*e, &parse, &decode);
+        for(urlString = optarg; *urlString != '\0'; urlString++)
+          parseURLQueryString(*urlString, &parse, &decode);
         parseURLQueryString(-1, &parse, &decode);
-        doanything = -1;
+        performedAction = true;
         break;
     }
   }
-  if(doanything == 0)
+  if(performedAction == false)
   {
     fprintf(stderr, "Usage: %s [-i | -s <urlquery> ]\n", argv[0]);
     fprintf(stderr, "\t-i  Read url query string from stdio and parse\n\t-s <url query string>  Parse url query string parameter\n");
