@@ -2,6 +2,7 @@
 #
 # Perform basic verification.  Test a representative set of url query strings:
 #
+# RUN THIS VERIFICATION SCRIPT BEFORE EACH COMMIT!
 
 TOOL=./urlQueryStringDecode
 TOOL_CORRECTNESS=true
@@ -45,7 +46,7 @@ fi
 
 
 # List of select url query strings and correct outputs to try:
-# TODO: Add several more test cases.
+# TODO: Add more test cases.
 
 testUrlQueryStringDecoder 'AAA=foba&B=42&abort' \
 \
@@ -70,8 +71,51 @@ testUrlQueryStringDecoder '&name=JOE&&place=EXETER&cid=293704264&&' \
 place="EXETER"
 cid="293704264"'
 
+testUrlQueryStringDecoder 'done=&=&a=1&b=2&&aa&ab=&ac=z' \
+\
+'done=""
+a="1"
+b="2"
+aa
+ab=""
+ac="z"'
 
+testUrlQueryStringDecoder '&name=John&&&=sdsdfsdf&location=here&&=&&end=' \
+\
+'name="John"
+location="here"
+end=""'
+
+testUrlQueryStringDecoder 'a=1&b=2&b=null=none&b=none=null&=none=null&&=null=none&command=load=file=final' \
+\
+'a="1"
+b="2"
+b="null=none"
+b="none=null"
+command="load=file=final"'
+
+testUrlQueryStringDecoder '&&&===&&&===&&&=&=&======&&&&&' \
+\
+''
+
+testUrlQueryStringDecoder '==dfs545g&&=gdsfg34256=fdgsdfg=&=f434534....%*#$0&=' \
+\
+''
+
+testUrlQueryStringDecoder 'customerID=#394BC30A4&random=23489..hfsd3^4^@$`!#0)*(<;,>:?]}[-_~' \
+\
+'customerID="#394BC30A4"
+random="23489..hfsd3^4^@$`!#0)*(<;,>:?]}[-_~"'
+
+testUrlQueryStringDecoder 'a="""""&b="123"' \
+\
+'a="\"\"\"\"\""
+b="\"123\""'
+
+
+#
 # If all tests passed, inform us.
+#
 
 if [ "${TOOL_CORRECTNESS}" = "true" ]; then
  echo ${TOOL}" passes verification test."
