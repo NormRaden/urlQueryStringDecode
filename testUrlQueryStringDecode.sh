@@ -27,7 +27,7 @@ function testUrlQueryStringDecoder ()
 
 # Test the '-i' option:
 
- RESULT=`echo "$1" | ${TOOL} -i`
+ RESULT=`echo -n "$1" | ${TOOL} -i`
  if [ "${RESULT}" != "$2" ]; then
   echo "ERROR: echo '"$1"' | "${TOOL}" -i generated:"
   echo
@@ -111,6 +111,15 @@ testUrlQueryStringDecoder 'a="""""&b="123"' \
 \
 'a="\"\"\"\"\""
 b="\"123\""'
+
+testUrlQueryStringDecoder 'EXTRAS=%20%21%22%23%24%25%26%28%29%2A%2B%2C%2D%2E%2F%3A%3B%3C%3D%3E%3F%5B%5C%5E%5F%7B%7C%7D%7E&extras=%20%21%22%23%24%25%26%28%29%2a%2b%2c%2d%2e%2f%3a%3b%3c%3d%3e%3f%5b%5c%5e%5f%7b%7c%7d%7e' \
+\
+'EXTRAS=" !\"#$%&()*+,-./:;<=>?[\^_{|}~"
+extras=" !\"#$%&()*+,-./:;<=>?[\^_{|}~"'
+
+testUrlQueryStringDecoder '' \
+\
+''
 
 
 #
