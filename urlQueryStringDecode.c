@@ -147,7 +147,7 @@ void parseURLQueryString(int c, parseURLQueryStringState *parseState, characterD
       {
         parseState->tokenDecode = UNKNOWN_TOKEN;
       }
-      else if (!((c == '&') || (c == -1) || (c == '\n')))
+      else if (!((c == '&') || (c == -1)))
       {
         parseState->tokenDecode = IDENTIFIER_TOKEN;
         decodeURLQueryStringAndPrint(c, characterState, replaceNonAlphaNumericsWithUnderscores);
@@ -160,7 +160,7 @@ void parseURLQueryString(int c, parseURLQueryStringState *parseState, characterD
          putchar('"');
          parseState->tokenDecode = VALUE_TOKEN;
       }
-      else if((c == '&') || (c == -1) || (c == '\n'))
+      else if((c == '&') || (c == -1))
       {
         putchar('\n');
         parseState->tokenDecode = IDENTIFIER_TOKEN_PENDING;
@@ -172,7 +172,7 @@ void parseURLQueryString(int c, parseURLQueryStringState *parseState, characterD
       break;
 
     case VALUE_TOKEN: 
-      if((c == '&') || (c == -1) || (c == '\n'))
+      if((c == '&') || (c == -1))
       {
         putchar('"');
         putchar('\n');
@@ -185,7 +185,7 @@ void parseURLQueryString(int c, parseURLQueryStringState *parseState, characterD
       break;
 
     case UNKNOWN_TOKEN:
-      if((c == '&') || (c == '\n'))
+      if((c == '&'))
       {
         parseState->tokenDecode = IDENTIFIER_TOKEN_PENDING;
       }
