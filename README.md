@@ -2,26 +2,26 @@
 
 ## DESCRIPTION
 
-Translates URL query strings to a list of variable assignments suitable for Bash scripts and other scripting languages. The URL query string is the part of a URL that follows the the first question mark character ("?"):
+Translates URL query strings to a list of variable assignments suitable for Bash scripts. The URL query string is the part of a URL that follows the the first question mark character ("?"):
 
  https://some.domainname.tld/resource?<URL query string\>
 
-This URL query string decoder translates "<variable1\>=<value1\>&<variable2\>=<value2\>&...&<variableN\>=<valueN\>" to:
+This URL query string decoder translates "<field1\>=<value1\>&<field2\>=<value2\>&...&<fieldN\>=<valueN\>" to:
 
- variable1="value1"\
- variable2="value2"\
+ field1="value1"\
+ field2="value2"\
  .\
  .\
  .\
- variableN="valueN"
+ fieldN="valueN"
 
 
-Additionally, a variable without a value is handled slightly differently in that the equals character is omitted. For example, "...&<variable\>&..." would be translated to:
+Additionally, a field without a value is handled slightly differently in that the equals character is omitted. For example, "...&<field\>&..." would be translated to:
 
 .\
 .\
 .\
- variable\
+ field\
 .\
 .\
 .
@@ -47,8 +47,6 @@ save
 
 ## BUILD
 
-Building urlQueryStringDecode requires: make gcc 
-
 To build 'urlQueryStringDecode':
 
 ```
@@ -69,13 +67,13 @@ To run the verification script, invoke Makefile target 'verify' via:
 
 urlQueryStringDecode supports two ways to receive the URL query string:
 
-Using option 'i' reads a URL query string from standard input and writes the list of variable assignments to standard output:
+Using option 'i' reads a URL query string from standard input and writes the list of field/variable assignments to standard output:
 
 ```
 # printURLquery | ./urlQueryStringDecode -i | handleAssignmentList
 ```
 
-Using option 's' reads URL query string from command line and writes the list of variable assignments to standard output:
+Using option 's' reads URL query string from the next command line argument and writes the list of field/variable assignments to standard output:
 
 ```
 # ./urlQueryStringDecode -s "<URL query string\>" | handleAssignmentList
