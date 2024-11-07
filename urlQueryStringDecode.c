@@ -12,21 +12,50 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS” 
 
 **/
 
+/*
+ * This program translates URL query strings like "field1=value1&field2=value2&field3=value3&..." to:
+ *
+ *   field1="value1"
+ *   field2="value2"
+ *   field3="value3"
+ *   [...]
+ *
+ *  which is a format more suitable for some scripting languages. Handles most of the character
+ *  encodings specific to URL query strings.
+ *
+ *  Supports:
+ *    - reading URL query strings from standard input.
+ *    - reading URL query strings as arguments on the command line.
+ *
+ *  Currently, non-alphanumeric characters in field's are replaced by underscores ('_').
+ *  Value's are double-quoted with double-quote characters are prepended by escape characters ('\')
+ *  that are a part of 'value'.
+ */
 
 #include <stdio.h>
 #include <unistd.h>
 #include <stdbool.h>
 
+/*
+ * Data structure 'characterDecodeState' is used to store the state for the state machine
+ * that decodes URL query string's character encodings.
+ */
+
 typedef struct
 {
-  enum
+  enum /* List of states */
   {
-    SINGLE_CHAR,
-    FIRST_HEXADECIMAL,
-    SECOND_HEXADECIMAL
+    SINGLE_CHAR,	/* Handling simple single characters. */
+    FIRST_HEXADECIMAL,	/* Handling the first hexadecimal digit in a '%FS' percent-encoding. */
+    SECOND_HEXADECIMAL	/* Handling the second hexadecimal digit in a '%FS' percent-encoding. */
   } charDecode;
-  char encodedChar;
+  char encodedChar;	/* Storage for constructing the single character from the percent-encoding. */
 } characterDecodeState;
+
+/*
+ * Function 'decodeHexDigit' simply returns the hexadecimal value inferred from character 'digit'.
+ * If no legal value can be determined, then return '-1'.
+ */
 
 int decodeHexDigit(char digit)
 {
@@ -40,52 +69,62 @@ int decodeHexDigit(char digit)
     return -1;
 }
 
+/*
+ * Function 'characterDecodeStateInitialize' initializes the state of URL query string character decoder.
+ */
+
 void characterDecodeStateInitialize(characterDecodeState *state)
 {
   state->charDecode = SINGLE_CHAR;
   state->encodedChar = (char)0;
 }
 
+/*
+ * Function 'decodeURLQueryStringAndPrint' receives URL query string characters one at a time via 'rawChar'
+ * and writes the decoded and reformatted 'field=value' list directly to standard out. 'state' points to storage for
+ * the state machine. 'rewriteCharacters' is a pointer to another function that further re-formats output characters.
+ */
+
 void decodeURLQueryStringAndPrint(char rawChar, characterDecodeState *state, void (*rewriteCharacters)(char))
 {
-  int digit;
+  int digit;	/* Place to put a hexadecimal value needed to decode '%xx' percent-encodings. */
 
   switch(state->charDecode)
   {
     case SINGLE_CHAR:
-      if(rawChar == '%')
+      if(rawChar == '%')	/* Begin handling the percent-encoding '%xx'. */
       {
         state->charDecode = FIRST_HEXADECIMAL;
         state->encodedChar = (char)0;
       }
-      else if(rawChar == '+')
+      else if(rawChar == '+')	/* Single '+' are decoded to ' ' characters, forward to 'rewriteCharacters'. */
       {
         rewriteCharacters(' ');
       }
-      else
+      else	/* All other characters are forwarded to 'rewriteCharacters' for further processing. */
       {
         rewriteCharacters(rawChar);
       }
       break;
 
     case FIRST_HEXADECIMAL:
-      digit = decodeHexDigit(rawChar);
+      digit = decodeHexDigit(rawChar);	/* Handle first hexadecimal character of '%xx' percent-encoding. */
       if(digit >= 0)
       {
-        state->encodedChar = digit<<4;
-        state->charDecode = SECOND_HEXADECIMAL;
+        state->encodedChar = digit<<4;	/* If valid hexadecimal, add it to the resultant character. */
+        state->charDecode = SECOND_HEXADECIMAL;	/* Move on to the next/last hexadecimal character. */
       }
       else
       {
-        state->charDecode = SINGLE_CHAR;  /* Error in decode */
+        state->charDecode = SINGLE_CHAR;  /* Invalid '%xx' percent-encoding, treat them like single characters. */
         rewriteCharacters('%');
         rewriteCharacters(rawChar);
       }
       break;
 
     case SECOND_HEXADECIMAL:
-      digit = decodeHexDigit(rawChar);
-      if(digit >= 0)
+      digit = decodeHexDigit(rawChar);	/* Handle second hexadecimal character of '%xx' percent-encoding. */
+      if(digit >= 0)	/* If valid hexadecimal, add it to the resultant character. */
       {
         state->encodedChar |= digit;
         state->charDecode = SINGLE_CHAR;
@@ -93,7 +132,11 @@ void decodeURLQueryStringAndPrint(char rawChar, characterDecodeState *state, voi
       }
       else
       {
-        state->charDecode = SINGLE_CHAR;  /* Error in decode */
+        /*
+         * Invalid second hexadecimal character, handle as a short '%x' percent-encoding and the second character
+         * as a separate character. Hand both off to 'rewriteCharacters' for final processing.
+         */
+        state->charDecode = SINGLE_CHAR;
         rewriteCharacters(state->encodedChar>>4);
         rewriteCharacters(rawChar);
       }
@@ -101,12 +144,16 @@ void decodeURLQueryStringAndPrint(char rawChar, characterDecodeState *state, voi
   }
 }
 
-void passThroughCharacters(char c)
+/*
+ * Functions used to perform additional formatting on decoded characters before sending to standard out:
+ */
+
+void passThroughCharacters(char c)	/* Pass through characters unaltered. (currently unused) */
 {
   putchar(c);
 }
 
-void escapeDoubleQuoteCharacters(char c)
+void escapeDoubleQuoteCharacters(char c)	/* Prepend '"' with '\', otherwise pass through. */
 {
   if(c == '"')
     putchar('\\');
@@ -114,7 +161,7 @@ void escapeDoubleQuoteCharacters(char c)
   putchar(c);
 }
 
-void replaceNonAlphaNumericsWithUnderscores(char c)
+void replaceNonAlphaNumericsWithUnderscores(char c)	/* Pass through all alpha-numeric characters, otherwise replace with '_'. */
 {
   if((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9'))
     putchar(c);
@@ -122,79 +169,107 @@ void replaceNonAlphaNumericsWithUnderscores(char c)
     putchar('_');
 }
 
+/*
+ * Data structure 'parseURLQueryStringState' used to store the state of the parser that handles
+ * field and value pairs in URL query strings.
+ */
+
 typedef struct
 {
-  enum
+  enum	/* List of states */
   {
-    IDENTIFIER_TOKEN_PENDING,
-    IDENTIFIER_TOKEN,
-    VALUE_TOKEN,
-    UNKNOWN_TOKEN
+    FIELD_TOKEN_PENDING,	/* Expecting a field */
+    FIELD_TOKEN,	/* Process a field */
+    VALUE_TOKEN,	/* Process a value */
+    UNKNOWN_TOKEN	/* Handle a sequence of invalid characters */
   } tokenDecode;
 } parseURLQueryStringState;
 
+/*
+ * Function 'parseURLQueryStringInitialize' initializes the state of URL query string parser.
+ */
+
 void parseURLQueryStringInitialize(parseURLQueryStringState *state)
 {
-  state->tokenDecode = IDENTIFIER_TOKEN_PENDING;
+  state->tokenDecode = FIELD_TOKEN_PENDING;
 }
+
+/*
+ * Function 'parseURLQueryString' receives URL query string characters one at a time via 'c' and parses,
+ * decodes characters encodings, applies additional reformatting and writes the translated 'field=value'
+ * to standard out. 'parseState' points to storage for the parser state machine. 'characterState' points
+ * to storage for character decoder state machine.
+ */
 
 void parseURLQueryString(int c, parseURLQueryStringState *parseState, characterDecodeState *characterState)
 {
   switch(parseState->tokenDecode)
   {
-    case IDENTIFIER_TOKEN_PENDING:
-      if(c == '=')
+    case FIELD_TOKEN_PENDING:
+      if(c == '=')	/* Field token beginning with '=' is invalid. */
       {
         parseState->tokenDecode = UNKNOWN_TOKEN;
       }
-      else if (!((c == '&') || (c == -1)))
+      else if (!((c == '&') || (c == EOF)))	/* If first character isn't an '&' and EOF, begin handling the field. */
       {
-        parseState->tokenDecode = IDENTIFIER_TOKEN;
+        parseState->tokenDecode = FIELD_TOKEN;
         decodeURLQueryStringAndPrint(c, characterState, replaceNonAlphaNumericsWithUnderscores);
       }
       break;
-    case IDENTIFIER_TOKEN:
-      if(c == '=')
+
+    case FIELD_TOKEN:
+      if(c == '=')	/* Switch from handling a field to handling a value. */
       {
          putchar('=');
          putchar('"');
          parseState->tokenDecode = VALUE_TOKEN;
       }
-      else if((c == '&') || (c == -1))
+      else if((c == '&') || (c == EOF))
+      /* We received '&' instead of '=', handle the field-only case gracefully. */
       {
         putchar('\n');
-        parseState->tokenDecode = IDENTIFIER_TOKEN_PENDING;
+        parseState->tokenDecode = FIELD_TOKEN_PENDING;
       }
       else
+      /*
+       * Decode characters that are part of the field and forward to
+       * 'replaceNonAlphaNumericsWithUnderscores()' for reformatting.
+       */
       {
         decodeURLQueryStringAndPrint(c, characterState, replaceNonAlphaNumericsWithUnderscores);
       }
       break;
 
-    case VALUE_TOKEN: 
-      if((c == '&') || (c == -1))
+    case VALUE_TOKEN:
+      if((c == '&') || (c == EOF))	/* Finished up handling a value. */
       {
         putchar('"');
         putchar('\n');
-        parseState->tokenDecode = IDENTIFIER_TOKEN_PENDING;
+        parseState->tokenDecode = FIELD_TOKEN_PENDING;
       }
       else
+      /* Decode characters that are part of the value and forward to 'escapeDoubleQuoteCharacters()' for reformatting. */
       {
         decodeURLQueryStringAndPrint(c, characterState, escapeDoubleQuoteCharacters);
       }
       break;
 
     case UNKNOWN_TOKEN:
-      if((c == '&'))
+      if(c == '&')	/* Silently discard an invalid token until we re-synchronize. */
       {
-        parseState->tokenDecode = IDENTIFIER_TOKEN_PENDING;
+        parseState->tokenDecode = FIELD_TOKEN_PENDING;
       }
       break;
   }
 }
 
-/* NOTE: For interfacing in bash:
- *   source /dev/stdin <<< `command`
+
+/*
+ * Function 'main' translates a URL query string to a list of corresponding <field>=<value> lines.
+ *
+ * Syntax: urlQueryStringDecode
+ *			-i					Reads query string from standard input.
+ *			-s '<query string>'	Reads query string from command line.
  */
 
 int main(int argc, char** argv)
@@ -202,27 +277,33 @@ int main(int argc, char** argv)
   int c;
   char *urlString;
 
+  /* Track whether a useful action was performed. */
   bool performedAction = false;
 
+  /* Allocate and initialize query string parser state. */
   parseURLQueryStringState parse;
   parseURLQueryStringInitialize(&parse);
 
+  /* Allocate and initialize query string character decoder state. */
   characterDecodeState decode;
   characterDecodeStateInitialize(&decode);
 
   int option;
 
+  /* Look for options '-i' or '-s'. */
   while ((option = getopt(argc, argv, "is:")) != -1)
   {
     switch(option)
     {
       case 'i':
+        /* For option '-i', read each character from standard input till EOF, feeding each in to 'parseURLQueryString' */
         while((c = getchar()) != EOF)
           parseURLQueryString(c, &parse, &decode);
         parseURLQueryString(-1, &parse, &decode);
         performedAction = true;
         break;
       case 's':
+        /* For option '-s', read next command line argument, feed each character in to 'parseURLQueryString' */
         for(urlString = optarg; *urlString != '\0'; urlString++)
           parseURLQueryString(*urlString, &parse, &decode);
         parseURLQueryString(-1, &parse, &decode);
@@ -230,10 +311,10 @@ int main(int argc, char** argv)
         break;
     }
   }
-  if(performedAction == false)
+  if(performedAction == false)	/* A useful action didn't happen, give usage information and exit. */
   {
     fprintf(stderr, "Usage: %s [-i | -s <urlquery> ]\n", argv[0]);
-    fprintf(stderr, "\t-i  Read url query string from stdio and parse\n\t-s <url query string>  Parse url query string parameter\n");
+    fprintf(stderr, "\t-i  Read url query string from standard input and parse\n\t-s <url query string>  Parse url query string parameter\n");
     return(-1);
   }
   else
