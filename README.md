@@ -26,7 +26,7 @@ Additionally, a field without a value is handled slightly differently in that th
 .\
 .
 
-The non-alphanumeric characters that are part of the variable are mapped to underscores ("_"), while quote characters ('\"') that are part of the value are "escaped" by prepending a backslash ("\\"). Character sequences "%<hex digits\>" and "+" in the URL query are handled appropriately. For example, the URL query string:
+The non-alphanumeric characters that are part of the field/variable are mapped to underscores ("_"), while quote characters ('\"') that are part of the value are "escaped" by prepending a backslash ("\\"). Character sequences "%<hex digits\>" and "+" in the URL query are handled appropriately. For example, the URL query string:
 
 ```
 date=2001-01-01&data.element1=nil&data.element2=empty+set&auth+type=pass&pass=A-3!dn=s6.d&result^code=ERROR&blob=dj832"-!%263k*e%25N,`dc~1$a&save
@@ -78,6 +78,8 @@ Using option 's' reads URL query string from the next command line argument and 
 ```
 # ./urlQueryStringDecode -s "<URL query string\>" | handleAssignmentList
 ```
+
+Only one -i or -s option is supported for each invocation of urlQueryStringDecode.
 
 In a http server Bash script:
 

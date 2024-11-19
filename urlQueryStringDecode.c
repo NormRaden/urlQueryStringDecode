@@ -293,6 +293,12 @@ int main(int argc, char** argv)
   /* Look for options '-i' or '-s'. */
   while ((option = getopt(argc, argv, "is:")) != -1)
   {
+    if(performedAction == true) /* Limit to only handling the first -i or -s option. */
+    {
+      fprintf(stderr, "WARNING: Only first -i or -s option is processed. Ignoring additional -i or -s options.\n");
+      return(0);
+    }
+
     switch(option)
     {
       case 'i':
@@ -311,9 +317,10 @@ int main(int argc, char** argv)
         break;
     }
   }
-  if(performedAction == false)	/* A useful action didn't happen, give usage information and exit. */
+  if(performedAction == false)	/* Neither option -s or -i was selected, give usage information and exit. */
   {
-    fprintf(stderr, "Usage: %s [-i | -s <urlquery> ]\n", argv[0]);
+    fprintf(stderr, "Usage: %s [-i | -s <url query string> ]\n", argv[0]);
+    fprintf(stderr, "\tOnly handles one -i or -s option per invocation.\n");
     fprintf(stderr, "\t-i  Read url query string from standard input and parse\n\t-s <url query string>  Parse url query string parameter\n");
     return(-1);
   }
