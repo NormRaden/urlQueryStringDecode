@@ -34,6 +34,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS” 
 
 #include <stdio.h>
 #include <unistd.h>
+#include <getopt.h>
 #include <stdbool.h>
 
 /*
@@ -268,8 +269,8 @@ void parseURLQueryString(int c, parseURLQueryStringState *parseState, characterD
  * Function 'main' translates a URL query string to a list of corresponding <field>=<value> lines.
  *
  * Syntax: urlQueryStringDecode
- *			-i					Reads query string from standard input.
- *			-s '<query string>'	Reads query string from command line.
+ *			-i, --input						Reads query string from standard input.
+ *			-s, --string '<query string>'	Reads query string from command line.
  */
 
 int main(int argc, char** argv)
@@ -288,14 +289,22 @@ int main(int argc, char** argv)
   characterDecodeState decode;
   characterDecodeStateInitialize(&decode);
 
+  /* Declare some long options to use instead of the short options. */
+  struct option long_options[] =
+  {
+    {"input", no_argument, 0, 'i'},
+    {"string", required_argument, 0, 's'},
+    {0, 0, 0, 0}
+  };
+
   int option;
 
-  /* Look for options '-i' or '-s'. */
-  while ((option = getopt(argc, argv, "is:")) != -1)
+  /* Look for options '-i'/'--input' or '-s'/'--string'. */
+  while ((option = getopt_long(argc, argv, "is:", long_options, NULL)) != -1)
   {
     if(performedAction == true) /* Limit to only handling the first -i or -s option. */
     {
-      fprintf(stderr, "WARNING: Only first -i or -s option is processed. Ignoring additional -i or -s options.\n");
+      fprintf(stderr, "WARNING: Only the first -i/--input or -s/--string option is processed. Ignoring additional -i/--input or -s/--string options.\n");
       return(0);
     }
 
@@ -319,9 +328,9 @@ int main(int argc, char** argv)
   }
   if(performedAction == false)	/* Neither option -s or -i was selected, give usage information and exit. */
   {
-    fprintf(stderr, "Usage: %s [-i | -s <url query string> ]\n", argv[0]);
-    fprintf(stderr, "\tOnly handles one -i or -s option per invocation.\n");
-    fprintf(stderr, "\t-i  Read url query string from standard input and parse\n\t-s <url query string>  Parse url query string parameter\n");
+    fprintf(stderr, "Usage: %s [-i | --input | -s <url query string> | --string <url query string> ]\n", argv[0]);
+    fprintf(stderr, "\tOnly handles one -i/--input or -s/--string option per invocation.\n");
+    fprintf(stderr, "\t-i, --input  Read url query string from standard input and parse\n\t-s, --string <url query string>  Parse url query string parameter\n");
     return(-1);
   }
   else
