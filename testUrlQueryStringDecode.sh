@@ -33,11 +33,33 @@ function testUrlQueryStringDecoder ()
   TOOL_CORRECTNESS=false
  fi
 
+# Test the '--string' option:
+
+ RESULT=`${TOOL} --string "$1"`
+ if [ "${RESULT}" != "$2" ]; then
+  echo "ERROR: "${TOOL}" --string '"$1"' generated:"
+  echo
+  echo "${RESULT}"
+  echo
+  TOOL_CORRECTNESS=false
+ fi
+
 # Test the '-i' option:
 
  RESULT=`echo -n "$1" | ${TOOL} -i`
  if [ "${RESULT}" != "$2" ]; then
   echo "ERROR: echo '"$1"' | "${TOOL}" -i generated:"
+  echo
+  echo "${RESULT}"
+  echo
+  TOOL_CORRECTNESS=false
+ fi
+
+# Test the '--input' option:
+
+ RESULT=`echo -n "$1" | ${TOOL} --input`
+ if [ "${RESULT}" != "$2" ]; then
+  echo "ERROR: echo '"$1"' | "${TOOL}" --input generated:"
   echo
   echo "${RESULT}"
   echo
