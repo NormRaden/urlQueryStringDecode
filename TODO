@@ -2,7 +2,5 @@
 
  - Generalize this beyond the original narrow hard-coded use-cases.
  - Increase readability.
- - Add quality control component.
- - Don't spend too much time on this throwaway.
-
-
+ - Support prepending a selected prefix string to the fields.
+ - Support selecting different character mappings for fields and values.

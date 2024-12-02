@@ -2,7 +2,7 @@
 
 ## DESCRIPTION
 
-Translates URL query strings to a list of variable assignments suitable for Bash scripts. The URL query string is the part of a URL that follows the the first question mark character ("?"):
+`urlQueryStringDecode` is a simple tool that translates URL query strings into a list of variable assignments suitable for Bash scripts. The URL query string is the part of a URL that follows the first question mark character ("?"):
 
  https://some.domainname.tld/resource?<URL query string\>
 
@@ -26,7 +26,7 @@ Additionally, a field without a value is handled slightly differently in that th
 .\
 .
 
-The non-alphanumeric characters that are part of the field/variable are mapped to underscores ("_"), while quote characters ('\"') that are part of the value are "escaped" by prepending a backslash ("\\"). Character sequences "%<hex digits\>" and "+" in the URL query are handled appropriately. For example, the URL query string:
+Non-alphanumeric characters that are part of the field/variable are mapped to underscores ("_"), while quote characters ('\"') that are part of the value are "escaped" by prepending a backslash ("\\"). Character sequences "%<hex digits\>" and "+" in the URL query are handled appropriately. For example, the URL query string:
 
 ```
 date=2001-01-01&data.element1=nil&data.element2=empty+set&auth+type=pass&pass=A-3!dn=s6.d&result^code=ERROR&blob=dj832"-!%263k*e%25N,`dc~1$a&save
@@ -55,7 +55,7 @@ To build 'urlQueryStringDecode':
 
 ## VERIFICATION
 
-There is a minimal verification script to test the correctness of urlQueryStringDecode to catch most errors introduced during development.
+A minimal verification script is available to test the correctness of urlQueryStringDecode to catch most errors introduced during development.
 
 To run the verification script, invoke Makefile target 'verify' via:
 
@@ -67,13 +67,13 @@ To run the verification script, invoke Makefile target 'verify' via:
 
 urlQueryStringDecode supports two ways to receive the URL query string:
 
-Using option '-i' or '--input'  reads a URL query string from standard input and writes the list of field/variable assignments to standard output:
+Using option '-i' or '--input' reads a URL query string from standard input and writes the list of field/variable assignments to standard output:
 
 ```
 # printURLquery | ./urlQueryStringDecode --input | handleAssignmentList
 ```
 
-Using option '-s' or '--string' reads URL query string from the next command line argument and writes the list of field/variable assignments to standard output:
+Using option '-s' or '--string' reads a URL query string from the next command line argument and writes the list of field/variable assignments to standard output:
 
 ```
 # ./urlQueryStringDecode --string "<URL query string\>" | handleAssignmentList
@@ -107,6 +107,5 @@ Or:
 
 ## PURPOSE
 
-This was created to assist in handling an API decode from a service provider within simple Bash scripts.
-
+Created to assist in handling API decodes within simple Bash scripts.
 
