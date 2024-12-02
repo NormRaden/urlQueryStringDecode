@@ -67,19 +67,19 @@ To run the verification script, invoke Makefile target 'verify' via:
 
 urlQueryStringDecode supports two ways to receive the URL query string:
 
-Using option 'i' reads a URL query string from standard input and writes the list of field/variable assignments to standard output:
+Using option '-i' or '--input'  reads a URL query string from standard input and writes the list of field/variable assignments to standard output:
 
 ```
-# printURLquery | ./urlQueryStringDecode -i | handleAssignmentList
+# printURLquery | ./urlQueryStringDecode --input | handleAssignmentList
 ```
 
-Using option 's' reads URL query string from the next command line argument and writes the list of field/variable assignments to standard output:
+Using option '-s' or '--string' reads URL query string from the next command line argument and writes the list of field/variable assignments to standard output:
 
 ```
-# ./urlQueryStringDecode -s "<URL query string\>" | handleAssignmentList
+# ./urlQueryStringDecode --string "<URL query string\>" | handleAssignmentList
 ```
 
-Only one -i or -s option is supported for each invocation of urlQueryStringDecode.
+Only one -i/--input or -s/--string option is supported for each invocation of urlQueryStringDecode.
 
 In a http server Bash script:
 
@@ -88,7 +88,7 @@ In a http server Bash script:
  #
  # Translate the URL query string from standard input to a variable assignment list and add it to the shell script's environment:
 
- source /dev/stdin <<< `urlQueryStringDecode -i`
+ source /dev/stdin <<< `urlQueryStringDecode --input`
 
  # Rest of script...
 ``` 
@@ -100,7 +100,7 @@ Or:
  #
  # Translate the URL query string from ${QUERY_STRING} to a variable assignment list and add it to the shell script's environment:
 
- source /dev/stdin <<< `urlQueryStringDecode -s "${QUERY_STRING}"`
+ source /dev/stdin <<< `urlQueryStringDecode --string "${QUERY_STRING}"`
 
  # Rest of script...
 ```
