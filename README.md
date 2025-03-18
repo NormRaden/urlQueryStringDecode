@@ -81,6 +81,8 @@ Using option '-s' or '--string' reads a URL query string from the next command l
 
 Only one -i/--input or -s/--string option is supported for each invocation of urlQueryStringDecode.
 
+Additionally, there is an optional -p/--prefix option that reads a prefix to prepend before fields from the next command line argument. This option should proceed the -i/--input or -s/--string option.
+
 In a http server Bash script:
 
 ```

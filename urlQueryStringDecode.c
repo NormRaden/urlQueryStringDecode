@@ -26,6 +26,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS” 
  *  Supports:
  *    - reading URL query strings from standard input.
  *    - reading URL query strings as arguments on the command line.
+ *    - prepending a selected string before the fields.
  *
  *  Currently, non-alphanumeric characters in field's are replaced by underscores ('_').
  *  Value's are double-quoted with double-quote characters are prepended by escape characters ('\')
@@ -199,10 +200,11 @@ void parseURLQueryStringInitialize(parseURLQueryStringState *state)
  * Function 'parseURLQueryString' receives URL query string characters one at a time via 'c' and parses,
  * decodes characters encodings, applies additional reformatting and writes the translated 'field=value'
  * to standard out. 'parseState' points to storage for the parser state machine. 'characterState' points
- * to storage for character decoder state machine.
+ * to storage for character decoder state machine. 'prependToToken' is a string that is inserted before
+ * the field tokens.
  */
 
-void parseURLQueryString(int c, parseURLQueryStringState *parseState, characterDecodeState *characterState)
+void parseURLQueryString(int c, parseURLQueryStringState *parseState, characterDecodeState *characterState, const char *prependBeforeToken)
 {
   switch(parseState->tokenDecode)
   {
@@ -214,6 +216,10 @@ void parseURLQueryString(int c, parseURLQueryStringState *parseState, characterD
       else if (!((c == '&') || (c == EOF)))	/* If first character isn't an '&' and EOF, begin handling the field. */
       {
         parseState->tokenDecode = FIELD_TOKEN;
+        if(prependBeforeToken)	/* Is there a string to prepend before the first token of the field? */
+        {
+          printf(prependBeforeToken);	/* Insert a string right before the first character of the field token. */
+        }
         decodeURLQueryStringAndPrint(c, characterState, replaceNonAlphaNumericsWithUnderscores);
       }
       break;
@@ -269,6 +275,7 @@ void parseURLQueryString(int c, parseURLQueryStringState *parseState, characterD
  * Function 'main' translates a URL query string to a list of corresponding <field>=<value> lines.
  *
  * Syntax: urlQueryStringDecode
+ *          -p, --prefix '<prefix string>'	Sets a prefix that is prepended before the generated <field>=<value> lines.
  *			-i, --input						Reads query string from standard input.
  *			-s, --string '<query string>'	Reads query string from command line.
  */
@@ -277,6 +284,7 @@ int main(int argc, char** argv)
 {
   int c;
   char *urlString;
+  char *prefixBeforeToken = NULL;
 
   /* Track whether a useful action was performed. */
   bool performedAction = false;
@@ -294,13 +302,14 @@ int main(int argc, char** argv)
   {
     {"input", no_argument, 0, 'i'},
     {"string", required_argument, 0, 's'},
+    {"prefix", required_argument, 0, 'p'},
     {0, 0, 0, 0}
   };
 
   int option;
 
   /* Look for options '-i'/'--input' or '-s'/'--string'. */
-  while ((option = getopt_long(argc, argv, "is:", long_options, NULL)) != -1)
+  while ((option = getopt_long(argc, argv, "is:p:", long_options, NULL)) != -1)
   {
     if(performedAction == true) /* Limit to only handling the first -i or -s option. */
     {
@@ -313,24 +322,29 @@ int main(int argc, char** argv)
       case 'i':
         /* For option '-i', read each character from standard input till EOF, feeding each in to 'parseURLQueryString' */
         while((c = getchar()) != EOF)
-          parseURLQueryString(c, &parse, &decode);
-        parseURLQueryString(-1, &parse, &decode);
+          parseURLQueryString(c, &parse, &decode, prefixBeforeToken);
+        parseURLQueryString(-1, &parse, &decode, prefixBeforeToken);
         performedAction = true;
         break;
       case 's':
         /* For option '-s', read next command line argument, feed each character in to 'parseURLQueryString' */
         for(urlString = optarg; *urlString != '\0'; urlString++)
-          parseURLQueryString(*urlString, &parse, &decode);
-        parseURLQueryString(-1, &parse, &decode);
+          parseURLQueryString(*urlString, &parse, &decode, prefixBeforeToken);
+        parseURLQueryString(-1, &parse, &decode, prefixBeforeToken);
         performedAction = true;
+        break;
+      case 'p':
+        /* For option '-p', use string pointed at by the next command line argument as the string to prepend before all generated <field>=<value> */
+        prefixBeforeToken = optarg;
         break;
     }
   }
   if(performedAction == false)	/* Neither option -s or -i was selected, give usage information and exit. */
   {
-    fprintf(stderr, "Usage: %s [-i | --input | -s <url query string> | --string <url query string> ]\n", argv[0]);
+    fprintf(stderr, "Usage: %s [ -p <field prefix> | --prefix <field prefix> ] [-i | --input | -s <url query string> | --string <url query string> ]\n", argv[0]);
     fprintf(stderr, "\tOnly handles one -i/--input or -s/--string option per invocation.\n");
-    fprintf(stderr, "\t-i, --input  Read url query string from standard input and parse\n\t-s, --string <url query string>  Parse url query string parameter\n");
+    fprintf(stderr, "\t-i, --input   Read url query string from standard input and parse\n\t-s, --string <url query string>  Parse url query string parameter\n");
+    fprintf(stderr, "\t-p, --prefix  Prepend a string before generated <field>=<value> pairs. This option should proceed the -i/--input or -s/--string option.\n");
     return(-1);
   }
   else

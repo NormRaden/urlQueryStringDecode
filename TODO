@@ -1,6 +1,6 @@
 # Possible improvements
 
  - Generalize this beyond the original narrow hard-coded use-cases.
- - Increase readability.
- - Support prepending a selected prefix string to the fields.
+ - Add support to the test script for verifying the '--prefix' option (prepending a selected prefix string to the generated fields).
  - Support selecting different character mappings for fields and values.
+
